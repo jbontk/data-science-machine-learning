@@ -61,6 +61,7 @@ test_set %>%
   group_by(sex) %>% 
   summarize(accuracy = mean(y_hat == sex))
 
+# PREVALENCE = proportion of a population who have a specific characteristic in a given time period.
 # Why? Because there are much more males than females in the dataset (PREVALENCE)
 # => If training data is biaised => likely to develop biaised algorithms
 prev <- mean(y == "Male")
@@ -77,10 +78,10 @@ cm <- confusionMatrix(data = y_hat, reference = test_set$sex)
 # Predicted positive    True Positive (TP)  False Positive (FP)
 # Predicted negative    False Negative (FN) True Negative (TN)
 
-# Measure of  Name 1 Name 2     Definition      Probability Representation
-# sensitivity TPR    Recall     TP / (TP + FN)  Pr(Y_HAT = 1 / Y = 1)
-# specificity TNR    1-FPR      TN / (TN + FP)  Pr(Y_HAT = 0 / Y = 0)
-# specificity PPV    Precision  TP / (TP + FP)  Pr(Y = 1 / Y_HAT = 1)         PPV = Positive Predictive Value
+# Measure of  Name 1  Name 2     Definition      Probability Representation
+# sensitivity TPR     Recall     TP / (TP + FN)  Pr(Y_HAT = 1 / Y = 1)
+# specificity TNR     1 - FPR    TN / (TN + FP)  Pr(Y_HAT = 0 / Y = 0)
+# specificity PPV     Precision  TP / (TP + FP)  Pr(Y = 1 / Y_HAT = 1)         PPV = Positive Predictive Value
 
 cm$overall["Accuracy"]
 cm$byClass[c("Sensitivity", "Specificity", "Prevalence")]
@@ -131,13 +132,14 @@ specificity(data = y_hat, reference = test_set$sex)
 # https://rafalab.github.io/dsbook/introduction-to-machine-learning.html#roc-and-precision-recall-curves
 #
 
+# Guessing Male with higher probability gives better prediction due to the bias in the sample
 p <- 0.9
 n <- length(test_index)
 y_hat <- sample(c("Male", "Female"), n, replace = TRUE, prob=c(p, 1-p)) %>%
   factor(levels = levels(test_set$sex))
 mean(y_hat == test_set$sex)
 
-# ROC curve
+# Receiver Operating Characteristic curve: ROC curve
 probs <- seq(0, 1, length.out = 10)
 guessing <- map_df(probs, function(p){
   y_hat <-
@@ -158,7 +160,8 @@ height_cutoff <- map_df(cutoffs, function(x){
        TPR = sensitivity(y_hat, test_set$sex))
 })
 
-# plot both curves together
+# plot both curves together: we observe better sensitivity for all values of specificity
+# => cutoff is a better prediction algorithm than guessing
 bind_rows(guessing, height_cutoff) %>%
   ggplot(aes(FPR, TPR, color = method)) +
   geom_line() +
@@ -180,7 +183,8 @@ map_df(cutoffs, function(x){
   geom_point() +
   geom_text_repel(nudge_x = 0.01, nudge_y = -0.01)
 
-# plot precision against recall
+# ROC curves have a weakness, they don't depend on prevalence
+# In cases in which prevalence matters, plot precision against recall
 guessing <- map_df(probs, function(p){
   y_hat <- sample(c("Male", "Female"), length(test_index),
                   replace = TRUE, prob=c(p, 1-p)) %>%
@@ -194,7 +198,7 @@ height_cutoff <- map_df(cutoffs, function(x){
   y_hat <- ifelse(test_set$height > x, "Male", "Female") %>%
     factor(levels = c("Female", "Male"))
   list(method = "Height cutoff",
-       recall = sensitivity(y_hat, test_set$sex),
+       recall = sensitivity(y_hat, test_set$sex), # Y = 1 if Female
        precision = precision(y_hat, test_set$sex))
 })
 
@@ -215,7 +219,7 @@ height_cutoff <- map_df(cutoffs, function(x){
   y_hat <- ifelse(test_set$height > x, "Male", "Female") %>%
     factor(levels = c("Male", "Female"))
   list(method = "Height cutoff",
-       recall = sensitivity(y_hat, relevel(test_set$sex, "Male", "Female")),
+       recall = sensitivity(y_hat, relevel(test_set$sex, "Male", "Female")), # Y = 1 if Male (relevel function)
        precision = precision(y_hat, relevel(test_set$sex, "Male", "Female")))
 })
 bind_rows(guessing, height_cutoff) %>%
