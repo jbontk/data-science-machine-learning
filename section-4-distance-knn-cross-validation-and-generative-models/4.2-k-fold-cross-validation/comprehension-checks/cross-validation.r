@@ -44,5 +44,5 @@ ggplot(fit)
 # Q7: my answer
 library(dslabs)
 data(tissue_gene_expression)
-fit <- with(tissue_gene_expression, train(x, y, method = "knn", tuneGrid = data.frame( k = seq(1, 7, 2))))
+fit <- with(tissue_gene_expression, train(x, y, method = "knn", tuneGrid = data.frame(k = seq(1, 7, 2))))
 ggplot(fit)
